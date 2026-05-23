@@ -8,17 +8,17 @@
 set -e
 
 # ── Config (edit these if needed) ────────────────────────────────────────────
-APPDATA_DIR="/mnt/user/appdata/document-mcp"
+APPDATA_DIR="/mnt/user/appdata/mcp"
 REPO_URL="https://github.com/09r3/mcp"
 BRANCH="main"
-CONTAINER_NAME="document-mcp"
-IMAGE_NAME="document-mcp"
-HOST_PORT=3100              # port exposed on Unraid (SSE/HTTP endpoint)
+CONTAINER_NAME="mcp"
+IMAGE_NAME="mcp"
+HOST_PORT=3167              # port exposed on Unraid (SSE/HTTP endpoint)
 CONTAINER_PORT=3000         # port inside the container (matches PORT in .env)
-SHARE_PATH="/mnt/user/Documents"   # Unraid SMB share mounted read-only as /data
+SHARE_PATH="/mnt/user/ai"   # Unraid SMB share mounted read-only as /data
 # ─────────────────────────────────────────────────────────────────────────────
 
-ENV_FILE="$APPDATA_DIR/.env"
+pENV_FILE="$APPDATA_DIR/.env"
 SOURCE_DIR="$APPDATA_DIR/_source"
 
 echo ""
