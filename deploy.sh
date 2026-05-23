@@ -1,8 +1,8 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────────
 #  Document MCP Server — Unraid Deploy Script  (production)
-#  Save this file to: /mnt/user/appdata/document-mcp/deploy.sh
-#  Run with:  bash /mnt/user/appdata/document-mcp/deploy.sh
+#  Save this file to: /mnt/user/appdata/mcp/deploy.sh
+#  Run with:  bash /mnt/user/appdata/mcp/deploy.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
@@ -15,10 +15,10 @@ CONTAINER_NAME="mcp"
 IMAGE_NAME="mcp"
 HOST_PORT=3167              # port exposed on Unraid (SSE/HTTP endpoint)
 CONTAINER_PORT=3000         # port inside the container (matches PORT in .env)
-SHARE_PATH="/mnt/user/ai"   # Unraid SMB share mounted read-only as /data
+SHARE_PATH="/mnt/user/ai"  # Unraid SMB share mounted read-only as /data
 # ─────────────────────────────────────────────────────────────────────────────
 
-pENV_FILE="$APPDATA_DIR/.env"
+ENV_FILE="$APPDATA_DIR/.env"
 SOURCE_DIR="$APPDATA_DIR/_source"
 
 echo ""
@@ -36,54 +36,49 @@ cd "$APPDATA_DIR"
 
 # ── 2. First-run: create .env from template and exit ─────────────────────────
 if [ ! -f "$ENV_FILE" ]; then
-    echo "[1/5] No .env found — creating from template..."
+    echo "[setup] No .env found at: $ENV_FILE"
+    echo "        Creating from built-in template..."
+    echo ""
 
-    curl -fsSL \
-        "https://raw.githubusercontent.com/09r3/mcp/$BRANCH/.env.example" \
-        -o "$ENV_FILE" 2>/dev/null \
-    || {
-        # Fallback minimal template if curl fails
-        cat > "$ENV_FILE" <<'EOF'
-# Path to the SMB share on the Unraid host, mounted read-only as /data inside
-# the container.  Change this to match your actual share path.
-SHARE_PATH=/mnt/user/Documents
+    cat > "$ENV_FILE" << 'ENVEOF'
+# Path to the SMB share on the Unraid host.
+# Mounted read-only as /data inside the container.
+SHARE_PATH=/mnt/user/ai
 
 # Transport mode:
-#   sse   — HTTP + Server-Sent Events endpoint (for Ollama, Open WebUI, etc.)
-#   stdio — stdin/stdout only (for Claude Desktop running docker run -i)
+#   sse   — HTTP + Server-Sent Events (for Ollama, Open WebUI, etc.)
+#   stdio — stdin/stdout only (for Claude Desktop via docker run -i)
 TRANSPORT=sse
 
 # Port the SSE server listens on inside the container.
-# The deploy script maps HOST_PORT -> CONTAINER_PORT on the host.
+# The deploy script maps HOST_PORT (3167) -> this PORT.
 PORT=3000
 
-# Files larger than this (MB) are rejected to prevent OOM inside the container.
+# Files larger than this (MB) are rejected to prevent OOM.
 MAX_FILE_SIZE_MB=100
 
 # Docker memory limit for the container.
 MEMORY_LIMIT=512m
-EOF
-    }
+ENVEOF
 
-    echo ""
     echo "  ┌──────────────────────────────────────────────────┐"
     echo "  │  ACTION REQUIRED                                 │"
-    echo "  │  Review and edit the settings file:             │"
-    echo "  │  $ENV_FILE"
     echo "  │                                                  │"
-    echo "  │  Key setting — set SHARE_PATH to the path of    │"
-    echo "  │  your SMB share on this Unraid machine, e.g.:   │"
-    echo "  │    SHARE_PATH=/mnt/user/Documents               │"
+    echo "  │  A settings file was created at:                │"
+    echo "  │    $ENV_FILE"
     echo "  │                                                  │"
-    echo "  │  Then re-run this script.                        │"
+    echo "  │  Edit it if needed, then re-run this script.    │"
     echo "  └──────────────────────────────────────────────────┘"
     echo ""
     exit 0
 fi
 
-# Load SHARE_PATH from .env if overridden there
+echo "  .env found at: $ENV_FILE"
+echo ""
+
+# Load SHARE_PATH from .env if set there (overrides the default above)
 if grep -q "^SHARE_PATH=" "$ENV_FILE" 2>/dev/null; then
-    SHARE_PATH=$(grep "^SHARE_PATH=" "$ENV_FILE" | cut -d= -f2- | tr -d '"' | tr -d "'")
+    SHARE_PATH=$(grep "^SHARE_PATH=" "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'" | tr -d '\r')
 fi
 
 # ── 3. Stop and remove existing container ────────────────────────────────────
@@ -128,10 +123,10 @@ if [ ! -d "$SHARE_PATH" ]; then
     echo "  ┌──────────────────────────────────────────────────┐"
     echo "  │  WARNING                                         │"
     echo "  │  Share path not found on this host:             │"
-    echo "  │  $SHARE_PATH"
+    echo "  │    $SHARE_PATH"
     echo "  │                                                  │"
-    echo "  │  The container will start but the /data volume  │"
-    echo "  │  will be empty until the share is mounted.      │"
+    echo "  │  The container will start but /data will be     │"
+    echo "  │  empty until the share is available.            │"
     echo "  └──────────────────────────────────────────────────┘"
     echo ""
     mkdir -p "$SHARE_PATH"
@@ -163,7 +158,7 @@ echo "  │  Health check:                                   │"
 echo "  │  http://${HOST_IP}:${HOST_PORT}/health"
 echo "  │                                                  │"
 echo "  │  Share mounted from:                             │"
-echo "  │  ${SHARE_PATH}"
+echo "  │    ${SHARE_PATH}"
 echo "  │                                                  │"
 echo "  │  To view logs:                                   │"
 echo "  │  docker logs -f $CONTAINER_NAME                 │"
