@@ -1,0 +1,35 @@
+services:
+  document-mcp:
+    build: .
+    container_name: document-mcp
+    restart: unless-stopped
+
+    environment:
+      TRANSPORT: ${TRANSPORT:-sse}
+      PORT: ${PORT:-3000}
+      SHARE_ROOT: /data
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-100}
+      NODE_ENV: production
+
+    volumes:
+      # SMB share mounted on the Unraid host (configurable via .env)
+      - ${SHARE_PATH:-/mnt/user/Documents}:/data:ro
+
+    ports:
+      # Expose SSE/HTTP endpoint for local LLMs (Ollama, LM Studio, etc.)
+      # Comment this out when using stdio-only mode with Claude Desktop
+      - "${PORT:-3000}:3000"
+
+    # Resource limits – tune to your Unraid hardware
+    deploy:
+      resources:
+        limits:
+          memory: ${MEMORY_LIMIT:-512m}
+        reservations:
+          memory: 128m
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
