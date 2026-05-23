@@ -1,0 +1,22 @@
+{
+  "name": "document-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for analyzing PDFs and spreadsheets from a mounted SMB share",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:stdio": "TRANSPORT=stdio node index.js",
+    "start:sse": "TRANSPORT=sse node index.js"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "^1.5.3-r.1",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "express": "^4.21.2",
+    "pdf-parse": "^1.1.1",
+    "xlsx": "^0.18.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
